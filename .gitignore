@@ -1,0 +1,4 @@
+*.json
+*.vmod
+*.bson
+/temp/*
