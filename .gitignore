@@ -1,4 +1,5 @@
 *.json
+!templates.json
 *.vmod
 *.bson
 /temp/*
