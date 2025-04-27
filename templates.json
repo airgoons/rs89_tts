@@ -46,7 +46,7 @@
       "ImageScalar": 1.0,
       "WidthScale": 0.0,
       "CustomTile": {
-        "Type": 0,
+        "Type": 3,
         "Thickness": 0.102777719,
         "Stackable": false,
         "Stretch": false
