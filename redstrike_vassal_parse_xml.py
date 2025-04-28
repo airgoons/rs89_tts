@@ -15,9 +15,22 @@ class Unit:
         self.back_png_url = None
 
         self.parse_unit_xml()
-        # bson contained in a Unit's Command's Nation's Faction
+        
         if bson_data is None:
-            self.set_image_urls(self.parent.parent.parent._bson_data)
+            # bson contained in a Unit's parent Faction
+            faction = None
+            if type(self.parent.parent.parent) is Faction:
+                # Unit has ONE command layer
+                faction = self.parent.parent.parent
+            elif type(self.parent.parent.parent) is Nation:
+                # Unit has TWO command layers
+                faction = self.parent.parent.parent.parent
+            else:
+                # Unit has more than two command layers
+                raise NotImplementedError("ERROR: Unit's parent Faction not in expected hierarchical location [{0}]".format(self.name))
+            
+            self.set_image_urls(faction._bson_data)
+
         else:
             self.set_image_urls(bson_data)
 
@@ -59,12 +72,23 @@ class Command:
     def __init__(self, parent, xml_data):
         self.parent = parent
         self.xml_data = xml_data
+        self.subordinate_commands = []
         self.units = []
         self.parse_command_xml()
 
     def parse_command_xml(self):
         # remove weird escape characters
         self.name = self.xml_data.get("@entryName", "").replace("\\", "")
+        
+        # handle case where there is another command layer:
+        subordinate_commands_raw = self.xml_data.get("VASSAL.build.widget.ListWidget", [])
+        if type(subordinate_commands_raw) is list:
+            for subordinate_command_raw in subordinate_commands_raw:
+                self.subordinate_commands.append(Command(self, subordinate_command_raw))
+        elif type(subordinate_commands_raw) is dict:
+            self.subordinate_commands.append(Command(self, subordinate_commands_raw))
+        else:
+            print("ERROR:  bruh")
         
         units_raw = self.xml_data.get("VASSAL.build.widget.PieceSlot", [])
         if type(units_raw) is list:
@@ -94,7 +118,16 @@ class Nation:
         elif type(commands_raw) is dict:
             self.commands.append(Command(self, commands_raw))
         else:
-            print("ERROR:  Nation with no commands??  {0}".format(self.name))
+            print("WARN:  Nation with no commands (list widget)??  {0}".format(self.name))
+
+        commands_raw_tabwidget = self.xml_data.get("VASSAL.build.widget.TabWidget", [])
+        if type(commands_raw_tabwidget) is list:
+            for command_raw in commands_raw_tabwidget:
+                self.commands.append(Command(self, command_raw))
+        elif type(commands_raw_tabwidget) is dict:
+            self.commands.append(Command(self, commands_raw_tabwidget))
+        else:
+            print("WARN:  Nation with no commands (tab widget)??  {0}".format(self.name))
 
 
 class Faction:
@@ -232,6 +265,17 @@ def publish_faction_json(factions, json_path):
             nation_dict = {}
             for command in nation.commands:
                 command_dict = {}
+                for subordinate_command in command.subordinate_commands:
+                    subordinate_command_dict = {}
+                    for unit in subordinate_command.units:
+                        unit_dict = {
+                            "front_png":        unit.front_png,
+                            "front_png_url":    unit.front_png_url,
+                            "back_png":         unit.back_png,
+                            "back_png_url":     unit.back_png_url
+                        }
+                        subordinate_command_dict[unit.name] = unit_dict
+                    command_dict[subordinate_command.name] = subordinate_command_dict
                 for unit in command.units:
                     unit_dict = {
                         "front_png":        unit.front_png,
