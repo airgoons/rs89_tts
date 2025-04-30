@@ -1,0 +1,2 @@
+Grab the latest Steamworks.NET dll package from:  https://github.com/rlabrecque/Steamworks.NET/releases
+    - Designed for Windows-x64 target.
