@@ -3,7 +3,7 @@ using System.IO;
 
 using SteamCloudFileManager;
 
-namespace TTS_GetCloudInfo_BSON {
+namespace TTS_CloudInfo_Dumper {
     internal class Program {
         static void Main(string[] args) {
             uint tts_app_id = 286160;
