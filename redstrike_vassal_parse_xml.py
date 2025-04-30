@@ -212,6 +212,29 @@ class Deck:
                 print("[WARN] bad deck??")
 
 
+class MarkerCategory:
+    def __init__(self, xml_data, bson_data):
+        self._xml_data = xml_data
+        self.markers = []
+        self.parse_category_xml(bson_data)
+
+    def parse_category_xml(self, bson_data):
+        # as of RS89 v1.2 markers are like units
+        self.name = self._xml_data.get("@entryName").replace("\\", " ")
+        markers_raw = self._xml_data["VASSAL.build.widget.PieceSlot"]
+
+        for marker_raw in markers_raw:
+            try:
+                _unit = Unit(self, marker_raw, bson_data)
+                if _unit.back_png is None:
+                    _unit.back_png = _unit.front_png
+                    _unit.back_png_url = _unit.front_png_url
+
+                self.markers.append(_unit)
+            except ValueError as e:
+                print("Weird Marker:  {0}".format(marker_raw.get("@entryName")))
+
+
 def extract_vassal_file(vmod_path, vmod_temp):
     # create temp directory
     if not os.path.exists(vmod_temp):
@@ -234,6 +257,7 @@ def parse_redstrike_hierarchy(buildfile_path, bson_data):
     
     factions = []
     decks = []
+    markers = []
 
     for entry_raw in entries_raw:
         entryName = entry_raw.get("@entryName")
@@ -246,7 +270,13 @@ def parse_redstrike_hierarchy(buildfile_path, bson_data):
             for deck_raw in decks_raw:
                 decks.append(Deck(deck_raw, bson_data))
 
-    return factions, decks
+        if (entryName == "Markers"):
+            # All markers are in separated into categories by a ListWidget
+            marker_categories_raw = entry_raw["VASSAL.build.widget.ListWidget"]
+            for category_raw in marker_categories_raw:
+                markers.append(MarkerCategory(category_raw, bson_data))
+
+    return factions, decks, markers
 
 
 def parse_bson(bson_path):
@@ -310,6 +340,26 @@ def publish_decks_json(decks, json_path):
     with open(json_path, 'w') as json_file:
         json.dump(data, json_file, indent=4)
 
+
+def publish_markers_json(markers, json_path):
+    data = {}
+
+    for category in markers:
+        category_dict = {}
+        for marker in category.markers:
+            marker_dict = {
+                "front_png":        marker.front_png,
+                "front_png_url":    marker.front_png_url,
+                "back_png":         marker.back_png,
+                "back_png_url":     marker.back_png_url
+            }
+            category_dict[marker.name] = marker_dict
+        data[category.name] = category_dict
+
+    with open(json_path, 'w') as json_file:
+        json.dump(data, json_file, indent=4)
+
+
 def cleanup(vmod_temp):
     shutil.rmtree(vmod_temp)
 
@@ -321,13 +371,15 @@ if __name__ == "__main__":
     buildfile_path = os.path.abspath("{0}//{1}".format(vmod_temp, "buildFile.xml"))
     factions_json_path = "{0}_factions.json".format(vmod_path)
     cards_json_path = "{0}_cards.json".format(vmod_path)
+    markers_json_path = "{0}_markers.json".format(vmod_path)
 
     extract_vassal_file(vmod_path, vmod_temp)
     bson_data = parse_bson(bson_path)
-    factions, decks = parse_redstrike_hierarchy(buildfile_path, bson_data)
+    factions, decks, markers = parse_redstrike_hierarchy(buildfile_path, bson_data)
     cleanup(vmod_temp)
 
     # jsons for debugging
     publish_faction_json(factions, factions_json_path)
     publish_decks_json(decks, cards_json_path)
+    publish_markers_json(markers, markers_json_path)
     print("DONE!")
