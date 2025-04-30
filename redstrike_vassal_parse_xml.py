@@ -15,9 +15,22 @@ class Unit:
         self.back_png_url = None
 
         self.parse_unit_xml()
-        # bson contained in a Unit's Command's Nation's Faction
+        
         if bson_data is None:
-            self.set_image_urls(self.parent.parent.parent._bson_data)
+            # bson contained in a Unit's parent Faction
+            faction = None
+            if type(self.parent.parent.parent) is Faction:
+                # Unit has ONE command layer
+                faction = self.parent.parent.parent
+            elif type(self.parent.parent.parent) is Nation:
+                # Unit has TWO command layers
+                faction = self.parent.parent.parent.parent
+            else:
+                # Unit has more than two command layers
+                raise NotImplementedError("ERROR: Unit's parent Faction not in expected hierarchical location [{0}]".format(self.name))
+            
+            self.set_image_urls(faction._bson_data)
+
         else:
             self.set_image_urls(bson_data)
 
@@ -59,12 +72,23 @@ class Command:
     def __init__(self, parent, xml_data):
         self.parent = parent
         self.xml_data = xml_data
+        self.subordinate_commands = []
         self.units = []
         self.parse_command_xml()
 
     def parse_command_xml(self):
         # remove weird escape characters
         self.name = self.xml_data.get("@entryName", "").replace("\\", "")
+        
+        # handle case where there is another command layer:
+        subordinate_commands_raw = self.xml_data.get("VASSAL.build.widget.ListWidget", [])
+        if type(subordinate_commands_raw) is list:
+            for subordinate_command_raw in subordinate_commands_raw:
+                self.subordinate_commands.append(Command(self, subordinate_command_raw))
+        elif type(subordinate_commands_raw) is dict:
+            self.subordinate_commands.append(Command(self, subordinate_commands_raw))
+        else:
+            print("ERROR:  bruh")
         
         units_raw = self.xml_data.get("VASSAL.build.widget.PieceSlot", [])
         if type(units_raw) is list:
@@ -94,7 +118,16 @@ class Nation:
         elif type(commands_raw) is dict:
             self.commands.append(Command(self, commands_raw))
         else:
-            print("ERROR:  Nation with no commands??  {0}".format(self.name))
+            print("WARN:  Nation with no commands (list widget)??  {0}".format(self.name))
+
+        commands_raw_tabwidget = self.xml_data.get("VASSAL.build.widget.TabWidget", [])
+        if type(commands_raw_tabwidget) is list:
+            for command_raw in commands_raw_tabwidget:
+                self.commands.append(Command(self, command_raw))
+        elif type(commands_raw_tabwidget) is dict:
+            self.commands.append(Command(self, commands_raw_tabwidget))
+        else:
+            print("WARN:  Nation with no commands (tab widget)??  {0}".format(self.name))
 
 
 class Faction:
@@ -179,6 +212,29 @@ class Deck:
                 print("[WARN] bad deck??")
 
 
+class MarkerCategory:
+    def __init__(self, xml_data, bson_data):
+        self._xml_data = xml_data
+        self.markers = []
+        self.parse_category_xml(bson_data)
+
+    def parse_category_xml(self, bson_data):
+        # as of RS89 v1.2 markers are like units
+        self.name = self._xml_data.get("@entryName").replace("\\", " ")
+        markers_raw = self._xml_data["VASSAL.build.widget.PieceSlot"]
+
+        for marker_raw in markers_raw:
+            try:
+                _unit = Unit(self, marker_raw, bson_data)
+                if _unit.back_png is None:
+                    _unit.back_png = _unit.front_png
+                    _unit.back_png_url = _unit.front_png_url
+
+                self.markers.append(_unit)
+            except ValueError as e:
+                print("Weird Marker:  {0}".format(marker_raw.get("@entryName")))
+
+
 def extract_vassal_file(vmod_path, vmod_temp):
     # create temp directory
     if not os.path.exists(vmod_temp):
@@ -201,6 +257,7 @@ def parse_redstrike_hierarchy(buildfile_path, bson_data):
     
     factions = []
     decks = []
+    markers = []
 
     for entry_raw in entries_raw:
         entryName = entry_raw.get("@entryName")
@@ -213,7 +270,13 @@ def parse_redstrike_hierarchy(buildfile_path, bson_data):
             for deck_raw in decks_raw:
                 decks.append(Deck(deck_raw, bson_data))
 
-    return factions, decks
+        if (entryName == "Markers"):
+            # All markers are in separated into categories by a ListWidget
+            marker_categories_raw = entry_raw["VASSAL.build.widget.ListWidget"]
+            for category_raw in marker_categories_raw:
+                markers.append(MarkerCategory(category_raw, bson_data))
+
+    return factions, decks, markers
 
 
 def parse_bson(bson_path):
@@ -232,6 +295,17 @@ def publish_faction_json(factions, json_path):
             nation_dict = {}
             for command in nation.commands:
                 command_dict = {}
+                for subordinate_command in command.subordinate_commands:
+                    subordinate_command_dict = {}
+                    for unit in subordinate_command.units:
+                        unit_dict = {
+                            "front_png":        unit.front_png,
+                            "front_png_url":    unit.front_png_url,
+                            "back_png":         unit.back_png,
+                            "back_png_url":     unit.back_png_url
+                        }
+                        subordinate_command_dict[unit.name] = unit_dict
+                    command_dict[subordinate_command.name] = subordinate_command_dict
                 for unit in command.units:
                     unit_dict = {
                         "front_png":        unit.front_png,
@@ -266,6 +340,26 @@ def publish_decks_json(decks, json_path):
     with open(json_path, 'w') as json_file:
         json.dump(data, json_file, indent=4)
 
+
+def publish_markers_json(markers, json_path):
+    data = {}
+
+    for category in markers:
+        category_dict = {}
+        for marker in category.markers:
+            marker_dict = {
+                "front_png":        marker.front_png,
+                "front_png_url":    marker.front_png_url,
+                "back_png":         marker.back_png,
+                "back_png_url":     marker.back_png_url
+            }
+            category_dict[marker.name] = marker_dict
+        data[category.name] = category_dict
+
+    with open(json_path, 'w') as json_file:
+        json.dump(data, json_file, indent=4)
+
+
 def cleanup(vmod_temp):
     shutil.rmtree(vmod_temp)
 
@@ -277,13 +371,15 @@ if __name__ == "__main__":
     buildfile_path = os.path.abspath("{0}//{1}".format(vmod_temp, "buildFile.xml"))
     factions_json_path = "{0}_factions.json".format(vmod_path)
     cards_json_path = "{0}_cards.json".format(vmod_path)
+    markers_json_path = "{0}_markers.json".format(vmod_path)
 
     extract_vassal_file(vmod_path, vmod_temp)
     bson_data = parse_bson(bson_path)
-    factions, decks = parse_redstrike_hierarchy(buildfile_path, bson_data)
+    factions, decks, markers = parse_redstrike_hierarchy(buildfile_path, bson_data)
     cleanup(vmod_temp)
 
     # jsons for debugging
     publish_faction_json(factions, factions_json_path)
     publish_decks_json(decks, cards_json_path)
+    publish_markers_json(markers, markers_json_path)
     print("DONE!")
