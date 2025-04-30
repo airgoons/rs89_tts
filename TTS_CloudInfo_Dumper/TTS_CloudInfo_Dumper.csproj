@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{2E72B54E-C542-436A-9BE7-2FCCE77D9197}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>TTS_GetCloudInfo_BSON</RootNamespace>
-    <AssemblyName>TTS_GetCloudInfo_BSON</AssemblyName>
+    <RootNamespace>TTS_CloudInfo_Dumper</RootNamespace>
+    <AssemblyName>TTS_CloudInfo_Dumper</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
