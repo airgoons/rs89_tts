@@ -9,9 +9,9 @@
       "rotX": -3.8959E-05,
       "rotY": 180.0,
       "rotZ": -1.034438E-05,
-      "scaleX": 1.0,
-      "scaleY": 1.0,
-      "scaleZ": 1.0
+      "scaleX": 0.25,
+      "scaleY": 0.25,
+      "scaleZ": 0.25
     },
     "Nickname": "Tile",
     "Description": "",
@@ -46,7 +46,7 @@
       "ImageScalar": 1.0,
       "WidthScale": 0.0,
       "CustomTile": {
-        "Type": 0,
+        "Type": 3,
         "Thickness": 0.102777719,
         "Stackable": false,
         "Stretch": false
