@@ -25,6 +25,9 @@ class Unit:
             elif type(self.parent.parent.parent) is Nation:
                 # Unit has TWO command layers
                 faction = self.parent.parent.parent.parent
+            elif type(self.parent.parent.parent) is Command:
+                # Unit has THREE command layers
+                faction = self.parent.parent.parent.parent.parent
             else:
                 # Unit has more than two command layers
                 raise NotImplementedError("ERROR: Unit's parent Faction not in expected hierarchical location [{0}]".format(self.name))
@@ -82,6 +85,8 @@ class Command:
         
         # handle case where there is another command layer:
         subordinate_commands_raw = self.xml_data.get("VASSAL.build.widget.ListWidget", [])
+        subordinate_commands_raw += self.xml_data.get("VASSAL.build.widget.TabWidget", [])
+        
         if type(subordinate_commands_raw) is list:
             for subordinate_command_raw in subordinate_commands_raw:
                 self.subordinate_commands.append(Command(self, subordinate_command_raw))
@@ -297,6 +302,17 @@ def publish_faction_json(factions, json_path):
                 command_dict = {}
                 for subordinate_command in command.subordinate_commands:
                     subordinate_command_dict = {}
+                    for subordinate_command2 in subordinate_command.subordinate_commands:
+                        subordinate_command2_dict = {}  # :/ this is getting ugly
+                        for unit in subordinate_command2.units:
+                            unit_dict = {
+                                "front_png":        unit.front_png,
+                                "front_png_url":    unit.front_png_url,
+                                "back_png":         unit.back_png,
+                                "back_png_url":     unit.back_png_url
+                            }
+                            subordinate_command2_dict[unit.name] = unit_dict
+                        subordinate_command_dict[subordinate_command2.name] = subordinate_command2_dict
                     for unit in subordinate_command.units:
                         unit_dict = {
                             "front_png":        unit.front_png,
