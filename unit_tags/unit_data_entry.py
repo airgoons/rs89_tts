@@ -14,6 +14,7 @@ class UnitType(StrEnum):
     AMPHIB_MECHINF = "AMPHIB_MECHINF"
     AMPHIB_RECON = "AMPHIB_RECON"
 
+
 class UnitFormation(StrEnum):
     FRONT = "FRONT"
     ARMY = "ARMY"
@@ -38,13 +39,13 @@ class UnitDataEntry:
 
 SpecialCases = [
     UnitDataEntry("7A_US_F_1.png", UnitType.HEADQUARTERS, UnitFormation.ARMY),
-    UnitDataEntry("7A_US_F_2.png", UnitType.MISSILE, None),
-    UnitDataEntry("7A_US_F_3.png", UnitType.MISSILE, None),
-    UnitDataEntry("7A_US_F_4.png", UnitType.MISSILE, None),
+    UnitDataEntry("7A_US_F_2.png", UnitType.MISSILE, UnitFormation.COMPANY),
+    UnitDataEntry("7A_US_F_3.png", UnitType.MISSILE, UnitFormation.COMPANY),
+    UnitDataEntry("7A_US_F_4.png", UnitType.MISSILE, UnitFormation.COMPANY),
     UnitDataEntry("BAOR_F_1.png", UnitType.HEADQUARTERS, UnitFormation.ARMY),
     UnitDataEntry("NF_SO_F_1.png", UnitType.HEADQUARTERS, UnitFormation.FRONT),
-    UnitDataEntry("RS_Ground_Units_F_286.png", UnitType.MISSILE, None),
-    UnitDataEntry("RS_Ground_Units_F_287.png", UnitType.MISSILE, None),
+    UnitDataEntry("RS_Ground_Units_F_286.png", UnitType.MISSILE, UnitFormation.COMPANY),
+    UnitDataEntry("RS_Ground_Units_F_287.png", UnitType.MISSILE, UnitFormation.COMPANY),
     UnitDataEntry("SF_SO_F_1.png", UnitType.HEADQUARTERS, UnitFormation.FRONT),
     UnitDataEntry("SOUTHAG_US_F_2.png", UnitType.HEADQUARTERS, UnitFormation.ARMY),
     UnitDataEntry("SWF_SO_F_1.png", UnitType.HEADQUARTERS, UnitFormation.FRONT),
