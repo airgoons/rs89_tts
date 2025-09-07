@@ -1,0 +1,5 @@
+# processing artifacts
+output.json
+purged.csv
+input_images/
+templates/

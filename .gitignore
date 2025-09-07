@@ -3,3 +3,5 @@
 *.vmod
 *.bson
 /temp/*
+__pycache__
+*.zip
