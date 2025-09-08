@@ -3,3 +3,4 @@ output.json
 purged.csv
 input_images/
 templates/
+!templates.zip
