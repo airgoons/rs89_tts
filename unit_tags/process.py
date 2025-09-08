@@ -83,9 +83,10 @@ if __name__ == "__main__":
     type_templates = load_templates("templates/unit_type_templates", UnitType)
 
     async def main():
-        entries = await process_images("input_images", type_templates, formation_templates)
-        entries += SpecialCases
-        json.dump([entry.__dict__ for entry in entries], open("output.json", "w"), indent=4)
+        entries_raw = await process_images("input_images", type_templates, formation_templates)
+        entries_raw += SpecialCases
+        entries = {entry.filename: entry.__dict__ for entry in entries_raw}
+        json.dump(entries, open("output.json", "w"), indent=4)
 
     asyncio.run(main())
     shutil.rmtree("templates")
@@ -97,15 +98,15 @@ if __name__ == "__main__":
             csvfile.write("purged filename\n")
             data_in = json.load(f)
 
-            for entry in data_in:
+            for entry_filename, entry in data_in.items():
                 if entry['unit_type'] is None and entry['unit_formation'] is None:
                     # Filter out entries that are not relevant
-                    if ("_F_" in entry["filename"]) and\
-                        ("Mrk" not in entry["filename"]) and\
-                        ("Naval" not in entry["filename"]) and\
-                        ("Air" not in entry["filename"]) and\
-                        ("Helo" not in entry["filename"]):
-                        csvfile.write(f"{entry["filename"]}\n")
+                    if ("_F_" in entry_filename) and\
+                        ("Mrk" not in entry_filename) and\
+                        ("Naval" not in entry_filename) and\
+                        ("Air" not in entry_filename) and\
+                        ("Helo" not in entry_filename):
+                        csvfile.write(f"{entry_filename}\n")
                     else:
                         continue
                 else:
@@ -121,11 +122,17 @@ if __name__ == "__main__":
 
         invalid_entries = []
         for entry in data:
-            if entry['unit_type'] is None or entry['unit_formation'] is None:
+            if entry['unit_type'] is None:
                 invalid_entries.append(entry)
+            elif entry['unit_formation'] is None:
+                entry["unit_formation"] = UnitFormation.COMPANY
+            elif (entry['unit_type'] is None) and (entry['unit_formation'] is None):
+                invalid_entries.append(entry)
+            else:
+                continue
 
         if invalid_entries:
-            print("Entries with no unit_type or no unit_formation:")
+            print("Entries with (no unit_type), or (no unit_type and no unit_formation)")
             for entry in invalid_entries:
                 print(f" - {entry["filename"]} {entry["unit_type"]} {entry["unit_formation"]}")
         else:
